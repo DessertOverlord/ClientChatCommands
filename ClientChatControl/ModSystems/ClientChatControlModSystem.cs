@@ -24,9 +24,7 @@ namespace ClientChatControl.ModSystems
             cPlayer = capi.World.Player;
         }
 
-        //protected abstract void RustwallStartServerSide();
-
-        protected void LoadConfig()
+        private void LoadConfig()
         {
             try
             {
@@ -44,9 +42,135 @@ namespace ClientChatControl.ModSystems
             }
         }
 
+        private void SaveConfig() 
+        {
+            capi.StoreModConfig(config, configName);
+        }
+
         private void RegisterClientChatCommands() 
         {
-            capi.Register
+            capi.ChatCommands.Create("c3")
+                //.RequiresPrivilege(Privilege.controlserver)
+                .RequiresPlayer()
+                .WithDescription("Change settings for Client Chat Control")
+
+                .BeginSubCommand("mute")
+                    .BeginSubCommand("playername")
+                    .WithDescription("Mutes a player given a player's name. Will be stored using their UID, so even if they change their name, it will be up-to-date. Player must be online! Duration is measured in minutes. Leave blank for forever.")
+                    .WithArgs(capi.ChatCommands.Parsers.OnlinePlayer("Player Name"), capi.ChatCommands.Parsers.OptionalInt("Duration"))
+                    .HandleWith((args) => {
+                        if (args[1] <= 0) 
+                        {
+                            config.PlayerUIDsMuted.Add(placeholder, -1);
+                            SaveConfig();
+                        } 
+                        else 
+                        {
+                            //find a C# function that can g
+                            long currentUnixEpochTime = 0;
+                            config.PlayerUIDsMuted.Add(placeholder, currentUnixEpochTime + (args[1] * 60))
+                        }
+
+
+                    })
+                    .EndSubCommand()
+
+                    .BeginSubCommand("playeruid")
+                    .WithDescription("Mutes a player given a player's UID. Not recommended, as usually you won't have this. Use playername instead. Even if they change their name, it will be up-to-date. Duration is measured in minutes. Leave blank for forever.")
+                    .WithArgs(capi.ChatCommands.Parsers.PlayerUids("Player UID"), capi.ChatCommands.Parsers.OptionalInt("Duration"))
+                    .HandleWith(
+                        
+                    )
+                    .EndSubCommand()
+
+                    .BeginSubCommand("list")
+                    .WithDescription("Lists all player UIDs that you currently have muted. Leave blank or enter \"false\" to list only online players, which will list their usernames. Otherwise, enter \"true\" to list all muted UIDs.")
+                    .WithArgs(capi.ChatCommands.Parsers.OptionalBool("List all"))
+                    .HandleWith(
+                        
+                    )
+                    .EndSubCommand()
+
+                .EndSubCommand()
+
+                .BeginSubCommand("filter")
+                    .BeginSubCommand("add")
+                    .WithDescription("Adds a word to the word filter list. Any word added to this list will be replaced with asterisks in chat. Detects only whole words.")
+                    .WithArgs(capi.ChatCommands.Parsers.Word("Word or Phrase"))
+                    .HandleWith((args) => {
+                        config.FilteredWordList.Add();
+                        SaveConfig();
+                        return TextCommandResult.Success("Added \"" + args[0] + "\" to filter list.");
+                    })
+                    .EndSubCommand()
+
+                    .BeginSubCommand("remove")
+                    .WithDescription("Removes a word from the word filter list. Must be exactly what was entered with .c3 filter add. (This may be easier to do by editing the config file.)")
+                    .WithArgs(capi.ChatCommands.Parsers.Word("Word or Phrase"))
+                    .HandleWith((args) => {
+                        //add some sort of bool to detect if we found the word in the list or not, with a corresponding failure message
+                        config.FilteredWordList.Remove();
+                        SaveConfig();
+                        return TextCommandResult.Success("Removed \"" + args[0] + "\" from filter list.");
+                    })
+                        .BeginSubCommand("index")
+                        .WithDescription("Removes a word from the word filter list using its index in the list. Use \".c3 filter list\" to list all words and their indicies.")
+                        .WithArgs(capi.ChatCommands.Parsers.Int("Index"))
+                        .HandleWith((args) => {
+                            //as above, failure detection and/or out of bounds access detection so we don't crash
+                            string removedWord = FilteredWordList[args[0]];
+                            config.FilteredWordList[args[0]].Remove();
+                            SaveConfig();
+                            return TextCommandResult.Success("Removed word \"" + removedWord + "\"" + " at index " + args[0] + " from filter list.");
+                        })
+                        .EndSubCommand()
+                    .EndSubCommand()
+
+                    .BeginSubCommand("list")
+                    .WithDescription("Lists all currently filtered words.")
+                    .HandleWith((args) => {
+                        if (config.FilteredWordList.Count == 0) 
+                        {
+                            return TextCommandResult.Success("Filtered word list is currently empty.");
+                        } 
+                        else
+                        {
+                            int i = 0;
+                            string output = "";
+                            foreach (string filteredWord in config.FilteredWordList) 
+                            {
+                                output += "\[" + i +"\]: " + filteredWord;
+                                i++;
+                                //We want to add a newline to every line except the last one.
+                                //Doing this after i++ above means that counting is accurate, since count = maximum index + 1.
+                                if (i != config.FilteredWordList.Count) 
+                                {
+                                    output += "\n";
+                                }
+                            }
+                            return TextCommandResult.Success("Filtered word list: \n");
+                        }
+                    })
+                    .EndSubCommand()
+
+                    .BeginSubCommand("clear")
+                    .WithDescription("Clears the entire word filter list.")
+                    .HandleWith(
+                        
+                    )
+                        .BeginSubCommand("confirm")
+                        .WithDescription("Are you sure?")
+                        .HandleWith((args) => {
+
+                            config.FilteredWordList.Clear();
+                            SaveConfig();
+
+                            return TextCommandResult.Success("Cleared all words from the word filter list.");
+                        })
+                        .EndSubCommand()
+                    .EndSubCommand()
+
+                .EndSubCommand();
         }
 
         ///psudo-code below... just outlining. Idk syntax

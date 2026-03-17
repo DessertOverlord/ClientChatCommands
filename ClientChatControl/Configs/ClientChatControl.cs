@@ -8,11 +8,12 @@ namespace ClientChatControl.Configs
 {
     public class ClientChatControlConfig
     {
-        //public List<string> PlayerUUIDsCurrentlyMuted
         ///
-        /// Dictionary of UUIDs and for how long they are muted (-1 means forever)
+        /// Dictionary of UUIDs and the expiration time of their mute in Unix Epoch Time. (-1 means no expiration).
+        /// https://www.epochconverter.com/
         /// 
-        public Dictionary<string, int> PlayerUUIDsMuted { };
+        public Dictionary<string, long> PlayerUIDsMuted { };
         public bool EnableBlockedChatMessageIndicator = true;
+        public List<string> FilteredWordList { };
     }
 }
